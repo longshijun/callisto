@@ -15,4 +15,6 @@ router.get('/user/page', function(req, res){
     });
 });
 
+router.post('/user/list', controller.getUserList);
+router.post('/user/unbind', controller.unbind);
 module.exports = router;

@@ -5,7 +5,8 @@ mongoose.connect('mongodb://127.0.0.1:27017/callisto');
 
 var schema = new Schema({
     /* _id: Schema.Types.ObjectId,*/
-    users: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    users: [],
+    fingers:[],
     device_id:{
         type:String,
     },

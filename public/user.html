@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html ng-app="starter">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width">
+    <title></title>
+
+    <link rel="manifest" href="manifest.json">
+    <style>
+
+    </style>
+    <link href="lib/ionic/css/ionic.css" rel="stylesheet">
+    <script src="lib/ionic/js/ionic.bundle.js"></script>
+
+</head>
+<body >
+    <ion-header-bar align-title="left" class="bar-balanced"">
+        <div class="buttons">
+            <button class="button" ng-click="doSomething()">左侧按钮</button>
+        </div>
+        <h1 class="title">Title!</h1>
+        <div class="buttons">
+            <button class="button">右侧按钮</button>
+        </div>
+    </ion-header-bar>
+    <ion-content ng-controller="userController">
+        <ion-list class="card">
+            <ion-item  class="item item-text-wrap">
+                管理员
+            </ion-item >
+        </ion-list>
+
+
+        <ion-list
+                  show-delete="false"
+                  show-reorder="false"
+                  can-swipe="true">
+            <ion-item ng-repeat="item in users"
+                      class="item-thumbnail-left">
+
+                <img ng-src="{{item.headimgurl}}">
+                <h2 style="padding-top: 20px">{{item.nickname}}</h2>
+                <p>{{user.province}} &nbsp; {{ item.city}}</p>
+                <ion-option-button class="button-positive"
+                                   ng-click="share(item)">
+                    开锁记录
+                </ion-option-button>
+                <ion-option-button class="button-info"
+                                   ng-click="user.unbind(item)">
+                    解绑
+                </ion-option-button>
+                <ion-delete-button class="ion-minus-circled"
+                                   ng-click="items.splice($index, 1)">
+                </ion-delete-button>
+                <ion-reorder-button class="ion-navicon"
+                                    on-reorder="reorderItem(item, $fromIndex, $toIndex)">
+                </ion-reorder-button>
+
+            </ion-item>
+        </ion-list>
+
+    </ion-content>
+</body>
+
+<script>
+    angular.module('starter', ['ionic'])
+
+            .run(function($ionicPlatform) {
+                $ionicPlatform.ready(function() {
+                    // Hide the accessory bar by default (remove this to show the accessory bar above the keyboard
+                    // for form inputs)
+                    if (window.cordova && window.cordova.plugins && window.cordova.plugins.Keyboard) {
+                        cordova.plugins.Keyboard.hideKeyboardAccessoryBar(true);
+                        cordova.plugins.Keyboard.disableScroll(true);
+
+                    }
+                    if (window.StatusBar) {
+                        // org.apache.cordova.statusbar required
+                        StatusBar.styleDefault();
+                    }
+                });
+            })
+            .controller('userController', ['$scope', '$http',  function($scope, $http){
+                var openid = 'oPT65swCoTFgQYMvDIOSgXY0Mwbc'; //oPT65swCoTFgQYMvDIOSgXY0Mwbc
+                $scope.user = {
+                    getUserList: function(){
+                        $http.post('/user/list', {
+                            openid: openid
+                        } ).then(function(response){
+                            var data = response.data;
+                            console.log('-------------->', data)
+                            if(data.errorCode == 0){
+                                $scope.users = data.result;
+                            }
+                        }, function(err){
+                            console.log(err);
+                        })
+
+                    },
+                    unbind: function(item){
+                        $http.post('/user/unbind', {
+                            openid: item.openid
+                        } ).then(function(response){
+                            var data = response.data;
+                            console.log('-------------->', data)
+                            if(data.errorCode == 0){
+                                $scope.user.getUserList();
+                            }
+                        }, function(err){
+                            console.log(err);
+                        })
+                    }
+                };
+                $scope.user.getUserList();
+
+            }])
+
+</script>
+</html>

@@ -47,7 +47,7 @@ var getByOpenid = function(openid, callback){
     })
 }
 
-var removeUser = function(openid, device_id,  callback){
+var removeUser = function(openid,  callback){
     getByOpenid(openid, function(err, user){
         if(err)
             return callback(err);
@@ -57,64 +57,69 @@ var removeUser = function(openid, device_id,  callback){
                 errMsg:'用户尚未注册'
             });
 
-        unbindDevice({
-            openid: openid,
-            device_id: device_id
-        }, function(err, result){
-            console.log('解绑用户:', err);
-            User.remove({
-                openid: openid
-            },function(err,result){
-                if(err)
-                    return callback(err);
-                return callback(null, result);
-            });
+
+
+        User.remove({
+            openid: openid
+        },function(err,result){
+            if(err)
+                return callback(err);
+            return callback(null, result);
+        });
+/*
+
+        getDeviceByOpenId(openid, function(err, device){
+            if(err)
+                return callback(err);
+            unbindDevice({
+                openid: openid,
+                device_id: device.device_id
+            }, function(err, result){
+                console.log('数据库要解绑设备了--->', err, result);
+
+            })
         })
+*/
 
     })
 }
 
 var bindDevice = function(param, callback){
-    Device.findOne({
-        mac: param.mac
-    }, function(err, dev){
+    getDeviceByOpenId(param.openid, function(err, device){
         if(err)
             return callback(err);
-        if(!dev)
-            return callback({
-                errorCode:1002,
-                errMsg:'未知设备'
-            });
 
-        getDeviceByOpenId(param.openid, function(err, device){
+        if(device){
+            return callback({
+                errorCode:12022,
+                errMsg:'您已经绑定了设备，无法再绑定其他设备'
+            })
+        }
+
+        wxDevice.findOne({device_id: param.device_id}, function(err, device){
             if(err)
                 return callback(err);
-
-            if(device){
-                return callback({
-                    errorCode:12022,
-                    errMsg:'您已经绑定了设备，无法再绑定其他设备'
-                })
-            }
-
-            wxDevice.findOne({device_id: param.device_id}, function(err, device){
+            getByOpenid(param.openid, function(err, user){
                 if(err)
                     return callback(err);
-                getByOpenid(param.openid, function(err, user){
+                if(!device){
+                    device = new wxDevice({
+                        users:[user._id],
+                        device_id: param.device_id,
+                        mac: param.mac,
+                        deviceType: param.deviceType,
+                        prototype_id: param.prototype_id
+                    });
+                }else{
+                    device.users.push(user._id);
+                }
+                User.find({}, function(err,  users ){
                     if(err)
                         return callback(err);
-                    if(!device){
-                        device = new wxDevice({
-                            users:[user._id],
-                            device_id: param.device_id,
-                            mac: param.mac,
-                            deviceType: param.deviceType,
-                            prototype_id: param.prototype_id
-                        });
-                    }else{
-                        device.users.push(user._id);
-                    }
-
+                    if(users[0].openid == param.openid)
+                        user.isOwner = true;
+                    else
+                        user.isOwner = false;
                     device.save(function(err, device){
                         if(err)
                             return callback(err);
@@ -124,18 +129,23 @@ var bindDevice = function(param, callback){
                                 .populate('device')
                                 .exec(function(err,  user){
                                     return callback(null, user);
-                                })
+                                });
 
                         });
                     });
                 })
+
+
             })
         })
-
-
     })
 }
-
+/*
+    param : {
+        openid:'',
+        device_id
+    }
+ */
 
 var unbindDevice = function(param, callback){
     var openid = param.openid;
@@ -144,6 +154,7 @@ var unbindDevice = function(param, callback){
     getDeviceByOpenId(param.openid, function(err, device){
         if(err)
             return callback(err);
+        console.log('================================>>>', err, device);
         if(device && device.device_id == device_id){ //获得了用户绑定的那个设备
             getByOpenid(param.openid, function(err, user){
                 if(err)
@@ -257,7 +268,7 @@ var canOPerate = function(openid, callback){
 }
 
 var getUsersByDeviceId = function(device_id, openid, callback){
-    Device.findOne({
+   /* Device.findOne({
         mac: device_id
     }, function(err, device){
         if(err)
@@ -267,23 +278,24 @@ var getUsersByDeviceId = function(device_id, openid, callback){
                 errorCode:1002,
                 errMsg:'未知设备'
             });
-        getDeviceByOpenId(openid, function(err, device){
-            if(err)
-                return callback(err);
-            if(!device || device.device_id != device_id)
-                return callback({
-                    errorCode: 20003,
-                    errMsg:'您还未绑定设备'
-                });
 
-            wxDevice.findOne({
-                device_id: device_id
-            }).populate('users').exec(function(err, result){
-                return callback(null, result);
-            })
-        });
 
-    })
+    })*/
+    getDeviceByOpenId(openid, function(err, device){
+        if(err)
+            return callback(err);
+        if(!device || device.device_id != device_id)
+            return callback({
+                errorCode: 20003,
+                errMsg:'您还未绑定设备'
+            });
+
+        wxDevice.findOne({
+            device_id: device_id
+        }).populate('users').exec(function(err, result){
+            return callback(null, result);
+        })
+    });
 }
 /*
 getDeviceByOpenId('longman', function(err, device){
@@ -445,12 +457,24 @@ updateDeviceStatus('1234567890', {
 }, function(err, result){
     console.log('绑定设备>', err, result);
 })*/
-/*removeUser('shitman','1234567890', function(err, result){
+/*
+removeUser('shitman','1234567890', function(err, result){
     if(err)
         return console.log(err);
     console.log('删除用户成功');
-});*/
+    bindDevice({
+        openid:'fuckman',
+        mac:'1234567890',
+        prototype_id:'1234567890',
+        deviceType:'fuckman',
+        device_id:'1234567890',
+        qrcode:'fuckman'
+    }, function(err, result){
+        console.log('绑定设备>', err, result);
+    })
+});
 
+*/
 
 /*canOPerate('fuckman', function(err, isAuthorized){
     if(err)
@@ -462,11 +486,19 @@ addFinger('longman', '1234567890', 50,  function(err, result){
     console.log('添加指纹了---->', err, result);
 } );
 
-module.exports = {
+module.exports.api = {
     createUser:createUser,
     getByOpenid:getByOpenid,
     removeUser:removeUser,
-    canOPerate:canOPerate
+    canOPerate:canOPerate,
+    bindDevice:bindDevice,
+    unbindDevice:unbindDevice,
+    addFinger:addFinger,
+    getUsersByDeviceId:getUsersByDeviceId,
+    updateDeviceStatus:updateDeviceStatus,
+    getDeviceStatus:getDeviceStatus,
+    getDeviceByOpenid:getDeviceByOpenId
+
 }
 
 //getByOpenid(1234423);

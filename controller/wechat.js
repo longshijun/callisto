@@ -9,7 +9,8 @@ var	MSG_TYPE_CONNECTION= '2'
 
 var common = {
     //api.batchGetUsers(['openid1', 'openid2'], callback)
-    batchGetUsers: function(){
+    batchGetUsers: function(users, callback){
+        var self = this;
         self.wechatAPI.batchGetUsers (users, function(err, result){
             if(err)
                 return callback(err);
@@ -292,13 +293,13 @@ var api = {
     reportDeviceConnection: function(accessToken, openId, device_id, connected, callback) {
 
         console.log('reportDeviceConnection token :' + accessToken);
-        this._transmsg.call(this, accessToken,
+        _transmsg.call(this, accessToken,
             {
                 device_type   : config.wx.weixin_primitive_ID,
                 device_id     : device_id,
                 open_id       : openId,
                 msg_type      : MSG_TYPE_CONNECTION,
-                device_status : connected ? '1' : '0'
+                device_status : connected
             },
             callback
         );
@@ -377,7 +378,7 @@ var api = {
         });
     },
 
-    bindOperation : function(data, bind, callback) {
+    bindOperation : function(data, bind, access_token,  callback) {
 
         var self = this;
         var options = {

@@ -33,7 +33,7 @@ function sha1(str) {
     shasum.update(str);
     return shasum.digest('hex');
 }
-app.use('/wechat',function(req, res, next){
+/*app.use('/wechat',function(req, res, next){
     var query = url.parse(req.url,true).query;
     var signature = query.signature;
     var echostr = query.echostr;
@@ -56,7 +56,7 @@ app.use('/wechat',function(req, res, next){
         res.end("false");
         console.log("Failed!");
     }
-})
+})*/
 
 app.use(router);
 app.listen(80);
