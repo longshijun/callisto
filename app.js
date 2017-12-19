@@ -10,8 +10,13 @@ var crypto = require("crypto");
 var config = require('./config');
 var app = express();
 var session = require('express-session');
+var callisto = require('./wechat/callisto');
 var router = require('./router/index');
+var server = require('http').Server(app);
+var io = require('socket.io')(server, { origins: '*:*'});
+callisto.controller.socketio = io;
 app.set('views', path.join(__dirname, 'views'));
+app.set('views', path.join(__dirname, 'public'));
 app.set('view engine', 'ejs');
 
 app.use(logger('dev'));
@@ -59,6 +64,5 @@ function sha1(str) {
 })*/
 
 app.use(router);
-app.listen(80);
-
+server.listen(80);
 module.exports = app;

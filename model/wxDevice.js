@@ -7,6 +7,9 @@ var schema = new Schema({
     /* _id: Schema.Types.ObjectId,*/
     users: [],
     fingers:[],
+    nickname: {
+      type: String,
+    },
     device_id:{
         type:String,
     },
@@ -21,9 +24,7 @@ var schema = new Schema({
     deviceType: {
         type:String,
     },
-    status:{
-        type: Schema.Types.Mixed
-    },
+    status: [],
 
     qrcode: {
         type:String,

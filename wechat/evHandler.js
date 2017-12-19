@@ -1,15 +1,20 @@
 var wechat = require('../controller/wechat');
-var user = require('../controller/user');
+var user = require('../controller/user-many');
+var async  = require('async');
 module.exports = {
     handBind: function(access_token, device_id, openid, callback){
         var self = this;
+
+        wechat.api.getDeviceStat(access_token, device_id, function(err, result){
+
+        });
+
         // 强行微信绑定设备
         user.api.bindDevice({
             openid: openid,
             device_id: device_id,
             mac: device_id.toUpperCase(),
         }, function(err, device){
-            console.log('数据库绑定---->', err, device);
             if(err)
                 return callback(err);
             wechat.api.bindOperation({
@@ -17,42 +22,69 @@ module.exports = {
                 openid: openid
             }, 'compel_bind', access_token, function(err, result){
                 console.log('微信绑定---》', err, result);
-                if(err){
+                result = typeof result == 'string'? JSON.parse(result) : result
+                if( err || result.base_resp.errcode != 0 ){ //微信绑定错误了
                     user.api.unbindDevice({
                         openid: openid,
                         device_id: device_id,
                         mac: device_id.toUpperCase(),
                     }, function(err){
-                        if(err)
+                        wechat.api.bindOperation({
+                            device_id: device_id,
+                            openid: openid
+                        }, 'compel_unbind', access_token, function(err, result){
+                            console.log('微信绑定错误，微信解绑---》', err, result);
                             return callback(err);
-                        return callback(null, result.base_resp);
+                        });
                     })
+                }else{
+                    return callback(null, result);
                 }
 
             });
         })
     },
-    handleUnbind: function(access_token, openid,  callback){
-        user.api.getDeviceByOpenid(openid, function(err, device){
-            if(err)
-                return callback(err);
-            wechat.api.bindOperation({
-                device_id: device.device_id,
-                openid: openid
-            }, 'compel_unbind', access_token,  function(err, result){
-                console.log('微信解绑--》', err, result);
-                user.api.unbindDevice({
-                    openid: openid,
-                    device_id:  device.device_id
-                }, function(err, result){
+    handleUnbind: function(access_token, param,  callback){
+        wechat.api.bindOperation({
+            device_id: param.device_id,
+            openid: param.openid
+        }, 'compel_unbind', access_token,  function(err, result){
+            console.log('微信解绑--》', err, result);
+
+            result = typeof result == 'string'? JSON.parse(result) : result
+            if(result.base_resp.errcode != 0)
+                return callback(result);
+            user.api.unbindDevice(param, function(err, result){
+                if(err)
+                    return callback(err);
+                console.log('数据库解绑-->', err, result);
+                return callback(null, result);
+            });
+        });
+    },
+    handleUnsubscribe: function(access_token, openid, callback){
+        user.api.getUserByOpenid(openid, function(err, result){
+            if(err) return callback(err);
+            async.eachSeries(result.device, function(device_id, callback) {
+                wechat.api.bindOperation({
+                    device_id: device_id,
+                    openid: openid
+                }, 'compel_unbind', access_token, function(err, result){
+                    console.log('微信解绑---》', err, result);
                     if(err)
                         return callback(err);
-                    console.log('数据库解绑-->', err, result);
-                    return callback(null, result.base_resp);
+                     else
+                        callback();
+                });
+            }, function(err){
+                user.api.removeUser(openid, function(err){
+                    if(err) return callback(err);
+                    //   fs.writeFileSync('./model/data.json', JSON.stringify(callisto.wechatInfo, null, '    '));
+                    return callback(null);
                 });
             });
-        })
 
+        })
 
     }
 }

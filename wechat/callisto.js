@@ -8,6 +8,9 @@ function Callisto (){
     this.controller = {};
     this.wechatInfo = {};
 }
+function init(){
+    var self = this;
+}
 
 Callisto.prototype.start = function(){
     var self = this;

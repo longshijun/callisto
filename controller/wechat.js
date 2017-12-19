@@ -275,8 +275,6 @@ var api = {
         };
         var req = https.request(options, function(res) {
             res.on('data', function (reply) {
-                self.logger.d('------   reply compelUnbind---------');
-                self.logger.e(JSON.parse(reply));
                 callback(null, JSON.parse(reply));
             });
         });
@@ -366,7 +364,7 @@ var api = {
     },
     getDeviceStat: function(access_token, device_id, callback){
         var weixin_host = 'api.weixin.qq.com';
-        var url = 'https://' +weixin_host + '/device/get_openid?access_token='+access_token+'&device_id='+ '&device_type=' + device_type;
+        var url = 'https://' +weixin_host + '/device/get_stat?access_token='+access_token+'&device_id='+ device_id;
         request.get(url, function(err, res, body) {
             if(err)
                 return callback(err);
@@ -408,7 +406,6 @@ var api = {
 
         req.end();
     }
-
 };
 module.exports = {
     common: common,

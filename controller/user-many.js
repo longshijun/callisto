@@ -1,9 +1,10 @@
 var User = require('../model/userMany');
 var Device = require('../model/device');
 var wxDevice = require('../model/wxDevice');
-var record = require('../model/record');
+var Record = require('../model/record');
 var _ = require('lodash');
 var async  = require('async');
+var moment = require('moment');
 var createUser = function(openid, callback){
     User.findOne({ 'openid':  openid },  function (err, user) {
         if(err)
@@ -41,12 +42,14 @@ var getUserByOpenid = function(openid, callback){
  openid:
  device_id
  */
-var getUsersByDeviceId = function(param, callback   ){
+var getDeviceByDeviceId = function(param, callback   ){
+    console.log('--查询-->', param)
     wxDevice.findOne({
         device_id: param.device_id
     }, function(err, device){
         if(err)
             return callback(err);
+        console.log('--查询设备结果i哦-->', err, device)
         return callback(null, device );
     })
 }
@@ -66,12 +69,11 @@ var bindDevice = function(param, callback){
         wxDevice.findOne({device_id: param.device_id}, function(err, device){
             if(err)
                 return callback(err);
-            console.log('============', device)
-
             if(!device){
                 var device = new wxDevice({
                     device_id: param.device_id,
-                    users: [param.openid]
+                    users: [param.openid],
+                    nickname: param.device_id
                 });
 
                 device.save(function(err, device){
@@ -89,7 +91,7 @@ var bindDevice = function(param, callback){
                     });
                 })
             }else{
-                var hasUser = device.users.indexOf(param.openid);
+                /*var hasUser = device.users.indexOf(param.openid);
                 if(hasUser > -1)
                     return callback({
                         errorCode:20001,
@@ -109,7 +111,12 @@ var bindDevice = function(param, callback){
                             errMsg:'ok'
                         })
                     })
-                })
+                })*/
+                if(device.users && device.users.length > 0)
+                    return callback({
+                        errorCode:20001,
+                        errMsg:'设备已被该用户绑定, 无法继续绑定其他设备！'
+                    });
             }
         })
     })
@@ -131,7 +138,6 @@ var unbindDevice = function(param, callback){
                 if(err)
                     return callback(err);
                 var hasUser = device.users.indexOf(param.openid);
-                console.log('----------->', hasUser);
                 if(hasUser > -1){
                     device.users.splice(hasUser, 1);
                     if(device.users.length == 0){
@@ -183,6 +189,10 @@ var removeUser = function(openid,   callback){
             }, function(err, device){
                 if(err)
                     return callback(err);
+
+                if(!device  || !device.users)
+                    return callback(null)
+
                 var index = device.users.indexOf(openid);
                 if(index > -1){
                     device.users.splice(index, 1);
@@ -218,27 +228,41 @@ var removeUser = function(openid,   callback){
     })
 }
 
-
-
 var updateDeviceStatus  = function(device_id,  status, callback){
     wxDevice.findOne({
         device_id: device_id
-    }).populate('users').exec(function(err, device){
+    }, function(err, device){
         if(err)
             return callback(err);
-        device.status = status;
-        device.save(callback);
-    });
+
+        if(!device)
+            return callback({
+                errorCode: 3012,
+                errmsg:'用户没有绑定该设备'
+            });
+
+        var temp = [];
+        var time = moment(Date.now()).format('YYYY-MM-DD HH:mm:ss');
+        status.time = time;
+        console.log('得到了设备状态--->', device);
+
+        device.status.push(status);
+        device.save(function(err){
+            if(err)
+                return callback(err)
+            return callback(null);
+        })
+    })
 };
 
 var getDeviceStatus = function(device_id, callback){
     wxDevice.findOne({
         device_id: device_id
-    }).populate('users').exec(function(err, device){
+    }, function(err, device){
         if(err)
             return callback(err);
-        return callback(null, device.status);
-    })
+        return callback(device.status);
+    });
 }
 
 /*
@@ -263,98 +287,177 @@ var canOperate = function(param, callback){
     })
 }
 
+/*
+    device_id
+    id
+ */
 var addFinger = function( param,  callback){
-    getUserByOpenid(param.openid, function(err, user){
+    wxDevice.findOne({
+        device_id: param.device_id
+    }, function(err, device){
         if(err)
             return callback(err);
-        if(!user.device || user.length == 0)
+
+        if(!device ||  device.users.length == 0)
             return callback({
                 errorCode: 20003,
                 errMsg:'您还未绑定设备'
             });
 
-        if(user.device.indexOf(param.device_id) == -1)
+        var index = _.findIndex(device.fingers, function(chr) {
+            return chr.id == param.id;
+        });
+        if(index < 0){
+            device.fingers.push({
+                id: param.id,
+                name: '',
+            });
+            device.save(function(err, device){
+                if(err)
+                    return callback(err);
+                return callback(null, {
+                    errorCode: 0,
+                    errMsg:'ok'
+                });
+            })
+        }else
+            return callback({
+                errorCode: 30001,
+                errMsg:'该指纹已存在，请勿重复添加'
+            });
+
+    })
+}
+
+var removeFinger = function(param, callback){
+    wxDevice.findOne({
+        device_id: param.device_id
+    }, function(err, device){
+        if(err)
+            return callback(err);
+
+        if(!device ||  device.users.length == 0)
             return callback({
                 errorCode: 20003,
                 errMsg:'您还未绑定设备'
             });
 
-        wxDevice.findOne({
-            device_id: param.device_id
-        }, function(err, device){
+        var index = _.findIndex(device.fingers, function(chr) {
+            return chr.id == param.id;
+        });
+
+        if(index  > -1){
+            device.fingers.splice(index, 1);
+            device.save(function(err, device){
+                if(err)
+                    return callback(err);
+                return callback(null, {
+                    errorCode:0,
+                    errMsg:'ok'
+                });
+            })
+        }else
+            return callback({
+                errorCode: 30001,
+                errMsg:'该指纹不存在'
+            });
+    });
+}
+
+// 报警和开门记录操作
+
+var setDoorRecord = function(device_id, param, callback){
+    wxDevice.findOne({
+        device_id: device_id
+    }, function(err, device){
+        if(err)
+            return callback(err);
+        if(!device  || !device.users.length)
+            return callback({
+                errorCode: 20003,
+                errMsg:'您还未绑定设备'
+            });
+
+        var warning = {};
+        if(param.fingerId != undefined){
+            var state = param.state || 'closed';
+            var fingerId = param.fingerId;
+            warning = {
+                device_id: device_id,
+                door: {
+                    state: state, //开门记录
+                    fingerId: fingerId
+                },
+                time:  moment(Date.now()).format('YYYY-MM-DD HH:mm:ss')
+            }
+        }else{
+            var alert = param.alert || 'closed';
+            waning = {
+                device_id: device_id,
+                time:  moment(Date.now()).format('YYYY-MM-DD HH:mm:ss'),
+                alert: alert
+            }
+        }
+        var record = new Record(waning);
+        record.save(function(err, record){
             if(err)
                 return callback(err);
-            var index = _.findIndex(device.fingers, function(chr) {
-                return chr.code == param.code;
-            });
-            if(index < 0){
-                device.fingers.push({
-                    code: param.code,
-                    openid: param.openid
-                });
-                device.save(function(err, device){
-                    if(err)
-                        return callback(err);
-                    return callback(null, {
-                        errorCode: 0,
-                        errMsg:'ok'
-                    });
-                })
-            }else
-                return callback({
-                    errorCode: 30001,
-                    errMsg:'该指纹已存在，请勿重复添加'
-                });
-
+            return  callback(null);
         })
 
     });
 }
 
-var removeFinger = function(param, callback){
-    getUserByOpenid(param.openid, function(err, user){
+var getAllRecord = function(device_id, callback){
+    wxDevice.findOne({
+        device_id: device_id
+    }), function(err, device){
         if(err)
             return callback(err);
-        if(!user.device || user.length == 0)
+
+        if(!device  || !device.users.length)
             return callback({
                 errorCode: 20003,
                 errMsg:'您还未绑定设备'
             });
 
-        if(user.device.indexOf(param.device_id) == -1)
+            Record.find({
+                device_id: device_id
+            }, function(err, result){
+                if(err)
+                    return callback(err);
+                return callback(null, result);
+            })
+    };
+}
+
+// start_time : 2017-10-20 10:00:00
+
+var getRecordByTime = function(device_id, start_time, end_time, callback){
+
+    wxDevice.findOne({
+        device_id: device_id
+    }), function(err, device){
+        if(err)
+            return callback(err);
+
+        if(!device  || !device.users.length)
             return callback({
                 errorCode: 20003,
                 errMsg:'您还未绑定设备'
             });
-
-
-
-        wxDevice.findOne({
-            device_id: param.device_id
-        }, function(err, device){
+        Record.find({
+            device_id: device_id,
+            time: {
+                "$lt": start_time,
+                "$gte": end_time
+            }
+        }, function(err, result){
             if(err)
                 return callback(err);
-            var index = _.findIndex(device.fingers, function(chr) {
-                return chr.code == param.code;
-            });
-
-            if(index  > -1){
-                device.fingers.splice(index, 1);
-                device.save(function(err, device){
-                    if(err)
-                        return callback(err);
-                    return callback(null, {
-                        errorCode:0,
-                        errMsg:'ok'
-                    });
-                })
-            }else
-                return callback({
-                    errorCode: 30001,
-                    errMsg:'该指纹不存在'
-                });
-        });
-    });
+            return callback(null, result);
+        })
+    };
 }
 
 
@@ -399,19 +502,33 @@ bindDevice({
 /*addFinger('longman', '1234567890', 50,  function(err, result){
  console.log('添加指纹了---->', err, result);
  } );*/
-removeFinger({
+/*removeFinger({
     openid:'longman',
     code:50,
     device_id:'1234567890'
 }, function(err, result){
     console.log('删除指纹:', err, result);
-});
+});*/
+/*
+setDoorRecord('845dd74a6c4b', {
+    state: 'open',
+    fingerId: 15
+}, function(err, result){
+    console.log('智能柜开门操作--->', err, result);
+})*/
 module.exports.api = {
     createUser:createUser,
     getUserByOpenid:getUserByOpenid,
+    bindDevice: bindDevice,
+    unbindDevice: unbindDevice,
     removeUser:removeUser,
+    getDeviceByDeviceId: getDeviceByDeviceId,
     updateDeviceStatus:updateDeviceStatus,
-    getDeviceStatus:getDeviceStatus
+    getDeviceStatus:getDeviceStatus,
+    addFinger: addFinger,
+    removeFinger: removeFinger,
+    getRecordByTime: getRecordByTime,
+    setDoorRecord:setDoorRecord
 }
 
 //getUserByOpenid(1234423);

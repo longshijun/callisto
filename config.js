@@ -10,6 +10,7 @@ var convertToAuthorizeURL = function(url, appId, appSecret, scope) {
 var wechat = {
     "weixin_domain":"api.weixin.qq.com/cgi-bin",
     "database":"callisto",
+
     "wx": {
     /*    "appid": "wxddde5e1ef8ae18b1",
         "secret": "8f15e038b5a862aa89d6584a91b3f44e",*/
@@ -25,6 +26,40 @@ var wechat = {
         "product_id":'',
         "product_id":41375,
         "type":"smart_device",
+        "template":{
+            bindSuccessInfo: 'hbO4HYlpnW6GfxC29J1e49gMAGWwQOCNoESVzjLJM_c',
+            /*
+             {first.DATA}}
+             设备ID：{{keyword1.DATA}}
+             设备名称：{{keyword2.DATA}}
+             绑定时间：{{keyword3.DATA}}
+             {{remark.DATA}}
+             */
+            bindFailInfo:'94s8Lt_tvwXWcq1opqBpkEbkP6F8q4Jm3RHwkfuMcHE',
+            /*
+                 {{first.DATA}}
+                 设备ID：{{keyword1.DATA}}
+                 绑定结果：{{keyword2.DATA}}
+                 绑定时间：{{keyword3.DATA}}
+                 {{remark.DATA}}
+
+             */
+            alertInfo: 'JxWJ176rF9P8QctbrAYux3z96s7X2E8wxnwKpE4g0cE',
+            /*
+             {{first.DATA}}
+             设备类型：{{keyword1.DATA}}
+             告警内容：{{keyword2.DATA}}
+             {{remark.DATA}}
+             */
+            errorInfo: 'n4feitCslnjoKx-3h82VX1jyoXHpui8Odj603QDFsnI'
+                /*
+                     {{first.DATA}}
+                     故障类型：{{keyword1.DATA}}
+                     故障时间：{{keyword2.DATA}}
+                     {{remark.DATA}}
+                 */
+
+        },
         "wx_menu": {
             "button": [
                 {
@@ -33,12 +68,12 @@ var wechat = {
                         {
                             "type": "view",
                             "name": "资讯菜单",
-                            "url": convertToAuthorizeURL(domain_name + '/user/page', 'wxc5fd7915e305622c',  '2d138f083de3633b7c99ed16e923a749', 'snsapi_base')
+                            "url": convertToAuthorizeURL(domain_name + '/device/list', 'wxc5fd7915e305622c',  '2d138f083de3633b7c99ed16e923a749', 'snsapi_base')
                         },
                         {
                             "type": "view",
                             "name": "用户列表",
-                            "url":  domain_name + '/user/list'
+                            "url":  domain_name + '/device/list'
                         }
                     ]
                 },

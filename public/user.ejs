@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html ng-app="starter">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width">
+    <title></title>
+    <link rel="manifest" href="manifest.json">
+    <link href="/lib/ionic/css/ionic.min.css" rel="stylesheet">
+    <script src="/lib/ionic/js/ionic.bundle.min.js"></script>
+    <script src="/javascripts/socket.io.js"></script>
+</head>
+<body >
+    <script id="templates/tabs.html" type="text/ng-template">
+        <ion-nav-view name="home-tab"></ion-nav-view>
+    </script>
+
+    <script id="templates/home.html" type="text/ng-template">
+        <ion-view view-title="我的设备">
+
+
+            <h3  class="title" ng-if="user.device.length == 0">
+                您暂无绑定设备
+            </h3>
+            <ion-content  class="padding">
+                <ion-list
+                        show-delete="false"
+                        show-reorder="false"
+                        can-swipe="true">
+                    <ion-item ng-click="goState($event, 'tabs.users', item)" ng-repeat="item in user.device track by $index">
+
+                        <p>智能保险柜 &nbsp;{{item}}</p>
+                        <ion-option-button class="button-positive"
+                                           ng-click="share(item)">
+                            开锁记录
+                        </ion-option-button>
+                        <ion-option-button class="button-info"
+                                           ng-click="user.unbind(item)">
+                            解绑
+                        </ion-option-button>
+                        <ion-delete-button class="ion-minus-circled"
+                                           ng-click="items.splice($index, 1)">
+                        </ion-delete-button>
+                        <ion-reorder-button class="ion-navicon"
+                                            on-reorder="reorderItem(item, $fromIndex, $toIndex)">
+                        </ion-reorder-button>
+
+                    </ion-item>
+                </ion-list>
+            </ion-content>
+        </ion-view>
+    </script>
+
+    <script id="templates/users.html" type="text/ng-template">
+        <ion-view view-title="用户列表">
+            <ion-content class="padding">
+                <ion-list >
+                    <ion-item  class="  item-avatar" ng-repeat="item in user.list">
+                        <img ng-src="{{item.headimgurl}}">
+                        <h2>{{item.nickname}}</h2>
+                        <p>{{item.city}}, &nbsp; {{item.province}}</p>
+                    </ion-item>
+                </ion-list>
+            </ion-content>
+        </ion-view>
+    </script>
+
+    <ion-nav-bar class="bar-positive">
+        <ion-nav-back-button>
+        </ion-nav-back-button>
+    </ion-nav-bar>
+
+    <ion-nav-view></ion-nav-view>
+</body>
+
+<script>
+    angular.module('starter', ['ionic'])
+
+            .run(function($ionicPlatform, $state, $rootScope ) {
+                $ionicPlatform.ready(function() {
+                    // Hide the accessory bar by default (remove this to show the accessory bar above the keyboard
+                    // for form inputs)
+                    if (window.cordova && window.cordova.plugins && window.cordova.plugins.Keyboard) {
+                        cordova.plugins.Keyboard.hideKeyboardAccessoryBar(true);
+                        cordova.plugins.Keyboard.disableScroll(true);
+
+                    }
+                    if (window.StatusBar) {
+                        // org.apache.cordova.statusbar required
+                        StatusBar.styleDefault();
+                    }
+                });
+
+                $rootScope.goState = function($event, page, params){
+                    $state.go(page, {params: params });
+                }
+            })
+            .config(function($stateProvider, $urlRouterProvider) {
+
+                $stateProvider
+                        .state('tabs', {
+                            url: "/tab",
+                            abstract: true,
+                            templateUrl: "templates/tabs.html"
+                        })
+                        .state('tabs.home', {
+                            url: "/home",
+                            views: {
+                                'home-tab': {
+                                    templateUrl: "templates/home.html",
+                                    controller: 'honeController'
+                                }
+                            }
+                        })
+                        .state('tabs.users', {
+                            url: "/users/:?params",
+                            views: {
+                                'home-tab': {
+                                    templateUrl: "templates/users.html",
+                                    controller:'userController'
+                                }
+                            }
+                        })
+                        .state('tabs.facts2', {
+                            url: "/facts2",
+                            views: {
+                                'home-tab': {
+                                    templateUrl: "templates/facts2.html"
+                                }
+                            }
+                        })
+
+
+                $urlRouterProvider.otherwise("/tab/home");
+
+            })
+
+            .controller('honeController', ['$scope', '$http', '$ionicPopup', function($scope, $http, $ionicPopup){
+
+                var socket = io.connect('http://dreamip.top:80/chat');
+                socket.on('data', function (data) {
+                    console.log(data);
+                    socket.emit('client', 'fuck you server!!!!');
+                });
+
+                var openid = 'oPT65swCoTFgQYMvDIOSgXY0Mwbc'; //oPT65swCoTFgQYMvDIOSgXY0Mwbc
+                $scope.tab = 'device'
+                $scope.user = {
+
+                    getDeviceList: function(){
+                        $http.post('/device/list', {
+                            openid: openid
+                        } ).then(function(response){
+                            var data = response.data;
+                            console.log('-------------->', data)
+                            if(data.errorCode == 0){
+                                $scope.user.device = data.result;
+                            }
+                        }, function(err){
+                            console.log(err);
+                        })
+
+                    },
+                    unbind: function(item){
+
+                        var confirmPopup = $ionicPopup.confirm({
+                            title: '是否解除该绑定',
+                            template: '解除绑定后将不再有对该设备的操作权限'
+                        });
+                        confirmPopup.then(function(res) {
+                            if(res) {
+                                $http.post('/user/unbind', {
+                                    openid: openid,
+                                    device_id: item
+
+                                } ).then(function(response){
+                                    var data = response.data;
+                                    console.log('-------------->', data)
+                                    if(data.errorCode == 0){
+                                        $scope.user.getDeviceList();
+                                    }
+                                }, function(err){
+                                    console.log(err);
+                                })
+                            } else {
+
+                            }
+                        });
+                    }
+                };
+                $scope.user.getDeviceList();
+
+            }])
+
+            .controller('userController', ['$scope', '$stateParams', '$http', function($scope, $stateParams, $http){
+                console.log('-------------->', $stateParams);
+                var device_id = $stateParams.params;
+                $scope.user = {};
+                $scope.getUserList = function(device_id){
+                    $http.post('/user/list', {
+                        device_id: device_id
+                    } ).then(function(response){
+                        var data = response.data;
+                        if(data.errorCode == 0){
+                            $scope.tab = 'users'
+                            $scope.user.list = data.result;
+                        }
+                    }, function(err){
+                        console.log(err);
+                    })
+                }
+                $scope.getUserList(device_id);
+            }]);
+
+
+
+
+</script>
+</html>
