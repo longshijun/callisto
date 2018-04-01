@@ -21,12 +21,12 @@
             <h3  class="title" ng-if="user.device.length == 0">
                 您暂无绑定设备
             </h3>
-            <ion-content  class="padding">
+            <ion-content >
                 <ion-list
                         show-delete="false"
                         show-reorder="false"
                         can-swipe="true">
-                    <ion-item ng-click="goState($event, 'tabs.users', item)" ng-repeat="item in user.device track by $index">
+                    <ion-item ng-click="goState($event, 'tabs.device', item)" ng-repeat="item in user.device track by $index">
 
                         <p>智能保险柜 &nbsp;{{item}}</p>
                         <ion-option-button class="button-positive"
@@ -50,17 +50,107 @@
         </ion-view>
     </script>
 
-    <script id="templates/users.html" type="text/ng-template">
-        <ion-view view-title="用户列表">
+    <script id="templates/device.html" type="text/ng-template">
+        <ion-view view-title="{{currentDevice.device_id}} {{}}">
+
             <ion-content class="padding">
-                <ion-list >
-                    <ion-item  class="  item-avatar" ng-repeat="item in user.list">
-                        <img ng-src="{{item.headimgurl}}">
-                        <h2>{{item.nickname}}</h2>
-                        <p>{{item.city}}, &nbsp; {{item.province}}</p>
-                    </ion-item>
-                </ion-list>
+
+                <div ng-if="currentDevice.showPanel == 'status'">
+                    <div ng-if="!currentDevice.online">
+                        <h3 class="title assertive">设备离线</h3>
+                        <div class="padding">
+                            <button  ng-click="currentDevice.getDeviceStatus()" class="button button-block button-positive">点击刷新</button>
+                        </div>
+                    </div>
+
+                    <div ng-if="currentDevice.online">
+                        <h3 class="title assertive">设备在线</h3>
+                        <div class="list">
+                            <label class="item item-input item-stacked-label">
+                                <span class="input-label">温度：</span>
+                                <input ng-model="currentDevice.status.tempeture"  readonly type="text" >
+                            </label>
+                            <label class="item item-input item-stacked-label">
+                                <span class="input-label">湿度：</span>
+                                <input ng-model="currentDevice.status.moisture"  readonly type="text">
+                            </label>
+
+                        </div>
+
+                        <div class="padding">
+                            <button  ng-click="currentDevice.getDeviceStatus()" class="button button-block button-positive">点击刷新</button>
+                        </div>
+                    </div>
+
+                </div>
+                <div ng-if="currentDevice.showPanel == 'finger'">
+
+                    <div ng-if="currentDevice.fingers.length" >
+                        <ion-list
+                                show-delete="false"
+                                show-reorder="false"
+                                can-swipe="true">
+                            <ion-item  ng-repeat="item in currentDevice.fingers" ng-click="goState($event, 'tabs.device', item)" >
+
+                                <p>指纹 &nbsp;{{item.id}}, {{item.name}}</p>
+                                <ion-option-button class="button-positive"
+                                                   ng-click="currentDevice.editFinger(item)">
+                                    编辑
+                                </ion-option-button>
+                                <ion-option-button class="button-info"
+                                                   ng-click="currentDevice.removeFinger(item)">
+                                    删除指纹
+                                </ion-option-button>
+                            </ion-item>
+                        </ion-list>
+                        <div class="padding">
+                            <button  ng-click="currentDevice.addFinger()" class="button button-block button-positive">点击添加指纹</button>
+                        </div>
+                    </div>
+                    <div ng-if="currentDevice.fingers.length == 0">
+                        <h3 class="title assertive">暂无指纹</h3>
+                        <div class="padding">
+                            <button  ng-click="currentDevice.addFinger()" class="button button-block button-positive">点击添加指纹</button>
+                        </div>
+                    </div>
+
+                </div>
+                <div ng-if="currentDevice.showPanel == 'record'">
+                    记录查询
+                    <ion-list
+                            show-delete="false"
+                            show-reorder="false"
+                            can-swipe="true">
+                        <ion-item ng-repeat="item in currentDevice.record " ng-click="goState($event, 'tabs.device', item)" >
+
+                            <p>{{item.type == 'door' ? '开门记录': '告警记录'}}</p>
+                            <p ng-if="item.type == 'door'">{{item.state}}, &nbsp; 指纹：{{item.door.finger.id}},&nbsp; {{item.door.finger.name}}</p>
+                            <p ng-if="item.type == 'door'">上报时间： {{item.time}}</p>
+                            <p ng-if="item.type == 'alert'">告警内容： {{item.alert}}</p>
+                            <p ng-if="item.type == 'alert'">上报时间： {{item.time}}</p>
+                            <ion-option-button class="button-info"
+                                               ng-click="currentDevice.deleteRecord(item)">
+                                删除记录
+                            </ion-option-button>
+                        </ion-item>
+                    </ion-list>
+                </div>
             </ion-content>
+
+            <div ng-if="currentDevice.online" class="tabs tabs-positive tabs-icon-top">
+                <a ng-click="currentDevice.showPanel = 'status'" ng-class="{'balanced' : currentDevice.showPanel == 'status'}" class="tab-item ">
+                    <i class="icon ion-home"></i>
+                    设备状态
+                </a>
+                <a ng-click="currentDevice.showPanel = 'finger'" ng-class="{'balanced' : currentDevice.showPanel == 'finger'}" class="tab-item">
+                    <i class="icon ion-star"></i>
+                    指纹列表
+                </a>
+                <a  ng-click="currentDevice.showPanel = 'record'"  ng-class="{'balanced' : currentDevice.showPanel == 'record'}" class="tab-item">
+                    <i class="icon ion-gear-a"></i>
+                    开锁记录
+                </a>
+            </div>
         </ion-view>
     </script>
 
@@ -73,6 +163,10 @@
 </body>
 
 <script>
+    //var openid = 'oPT65swCoTFgQYMvDIOSgXY0Mwbc';
+    //var openid = 'oPT65swCoTFgQYMvDIOSgXY0Mwbc';
+    var openid = 'oPT65s7lK8bdpLdLtLomWpPqceqk';
+    var domain = 'http://weixin.china-pingan.com';
     angular.module('starter', ['ionic'])
 
             .run(function($ionicPlatform, $state, $rootScope ) {
@@ -111,12 +205,12 @@
                                 }
                             }
                         })
-                        .state('tabs.users', {
-                            url: "/users/:?params",
+                        .state('tabs.device', {
+                            url: "/device/?:params",
                             views: {
                                 'home-tab': {
-                                    templateUrl: "templates/users.html",
-                                    controller:'userController'
+                                    templateUrl: "templates/device.html",
+                                    controller:'deviceController'
                                 }
                             }
                         })
@@ -136,18 +230,13 @@
 
             .controller('honeController', ['$scope', '$http', '$ionicPopup', function($scope, $http, $ionicPopup){
 
-                var socket = io.connect('http://dreamip.top:80/chat');
-                socket.on('data', function (data) {
-                    console.log(data);
-                    socket.emit('client', 'fuck you server!!!!');
-                });
 
-                var openid = 'oPT65swCoTFgQYMvDIOSgXY0Mwbc'; //oPT65swCoTFgQYMvDIOSgXY0Mwbc
+               // var openid = 'oPT65swCoTFgQYMvDIOSgXY0Mwbc'; //oPT65swCoTFgQYMvDIOSgXY0Mwbc
                 $scope.tab = 'device'
                 $scope.user = {
 
                     getDeviceList: function(){
-                        $http.post('/device/list', {
+                        $http.post( domain + '/device/list', {
                             openid: openid
                         } ).then(function(response){
                             var data = response.data;
@@ -191,24 +280,242 @@
 
             }])
 
-            .controller('userController', ['$scope', '$stateParams', '$http', function($scope, $stateParams, $http){
+            .controller('deviceController', ['$scope', '$stateParams', '$http', '$ionicPopup',
+                function($scope, $stateParams, $http, $ionicPopup){
                 console.log('-------------->', $stateParams);
-                var device_id = $stateParams.params;
-                $scope.user = {};
-                $scope.getUserList = function(device_id){
-                    $http.post('/user/list', {
-                        device_id: device_id
-                    } ).then(function(response){
-                        var data = response.data;
-                        if(data.errorCode == 0){
-                            $scope.tab = 'users'
-                            $scope.user.list = data.result;
-                        }
-                    }, function(err){
-                        console.log(err);
-                    })
+                 $scope.socket = io.connect( domain + '/chat');
+
+                $scope.socket.on('data', function (data) {
+
+                }).on('connect', function(){
+                    $scope.socket.emit('client',  {openid: openid});
+                  //  alert('connection success');
+                }).on('status', function(data){
+                    alert(JSON.stringify(data));
+                    $scope.currentDevice.status = data;
+                    $scope.$apply();
+                }).on('fingerAdd', function(data){
+                    if(data.errorCode == 0 && data.type == 'fingerAdd')
+                        $scope.currentDevice.getDeviceInfo(function(){
+                            $scope.$apply();
+                        });
+                }).on('fingerRemove', function(data){
+                    if(data.errorCode == 0 && data.type == 'fingerRemove')
+                        $scope.currentDevice.getDeviceInfo(function(){
+                            $scope.$apply();
+                            alert('指纹删除成功');
+                        });
+
+                });
+
+                $scope.currentArr = {}
+
+                $scope.currentDevice = {
+                    showPanel:'status',
+                    device_id : $stateParams.params,
+                    online:0,
+                    status:{},
+                    fingers:[],
+                    record:[],
+                    getDeviceStatus: function(callback){
+                        $http.post(domain + '/device/status', {
+                         //   device_id: $scope.currentDevice.device_id
+                         //   device_id: '845DD74D4D9A' //作为测试环境
+                            device_id: $scope.currentDevice.device_id //作为测试环境
+                        } ).then(function(response){
+                            var data = response.data;
+                            console.log('-------------->', data)
+                            if(data.errorCode == 0){
+                                $scope.currentDevice.online = data.status;
+                                if(!data.status)
+                                    var alertPopup = $ionicPopup.alert({
+                                        title: '提示',
+                                        template: '<p>设备离线 </p>'
+                                    });
+                            }else{
+                                var alertPopup = $ionicPopup.alert({
+                                    title: '提示',
+                                    template: '<p>错误提示 ' +  data.errMsg + '</p>'
+                                });
+                            }
+                        }, function(err){
+                            console.log(err);
+                        })
+                    },
+                    editFinger: function(item){
+                        var myPopup = $ionicPopup.show({
+                            template: '<input type="text" ng-model="currentArr.name">',
+                            title: '输入指纹名称',
+                            subTitle: 'Please use normal things',
+                            scope: $scope,
+                            buttons: [
+                                { text: '取消' },
+                                {
+                                    text: '<b>提交</b>',
+                                    type: 'button-positive',
+                                    onTap: function(e) {
+                                        if (!$scope.currentArr.name) {
+                                            //不允许用户关闭，除非他键入wifi密码
+                                            e.preventDefault();
+
+                                        } else {
+
+                                            $http.post(domain + '/device/updateFingerName', {
+                                                device_id: $scope.currentDevice.device_id,
+                                                fingerId: item.id,
+                                                name: $scope.currentArr.name
+                                            } ).then(function(response){
+                                                var data = response.data;
+                                                console.log('-------------->', data)
+                                                if(data.errorCode == 0){
+                                                    $scope.currentDevice.fingers = data.device.fingers;
+                                                    $scope.currentArr.name = undefined;
+                                                    callback();
+
+                                                }
+                                            }, function(err){
+                                                console.log(err);
+                                            })
+
+                                            //  return $scope.currentArr.name;
+                                        }
+                                    }
+                                },
+                            ]
+                        });
+                        myPopup.then(function(res) {
+                            console.log('Tapped!', res);
+                        });
+
+
+                    },
+                    addFinger: function(){
+
+                        var confirmPopup = $ionicPopup.confirm({
+                            title: '指纹添加请求？',
+                            template: '<h4>请求发送后需要将手指放在设备上等待添加指纹</h4>'
+                        });
+                        confirmPopup.then(function(res) {
+                            if(res) {
+                                $http.post(domain + '/device/addFinger', {
+                                    //   device_id: $scope.currentDevice.device_id
+                                    device_id: $scope.currentDevice.device_id //'845dd74a6c4b', //作为测试环境
+                                } ).then(function(response){
+                                    var data = response.data;
+                                    if(data.errorCode == 0){
+                                        var alertPopup = $ionicPopup.alert({
+                                            title: '成功',
+                                            template: '指纹添加请求发送成功'
+                                        });
+                                    }else if(data.errorCode == 3807){
+                                        var alertPopup = $ionicPopup.alert({
+                                            title: '提示',
+                                            template: '设备离线'
+                                        });
+                                        alertPopup.then(function(res) {
+                                            console.log('Thank you for not eating my delicious ice cream cone');
+                                        });
+                                    }else {
+                                        var alertPopup = $ionicPopup.alert({
+                                            title: '<p class="title assertive" >失败</p>',
+                                            template: '<p>错误提示 ' +  data.errMsg + '</p>'
+                                        });
+                                    }
+
+                                }, function(err){
+                                    console.log(err);
+                                })
+                            } else {
+
+                            }
+                        });
+
+                    },
+                    removeFinger: function(item){
+                        var confirmPopup = $ionicPopup.confirm({
+                            title: '指纹删除请求？',
+                            template: '<h4>请求发送后需要将手指放在设备上等待删除指纹</h4>'
+                        });
+                        confirmPopup.then(function(res) {
+                            if(res) {
+                                $http.post(domain + '/device/removeFinger', {
+                                    fingerId: item.id,
+                                    device_id: $scope.currentDevice.device_id, //作为测试环境
+                                } ).then(function(response){
+                                    var data = response.data;
+                                    if(data.errorCode == 0){
+                                        var alertPopup = $ionicPopup.alert({
+                                            title: '成功',
+                                            template: '指纹删除请求发送成功'
+                                        });
+                                    }else if(data.errorCode == 3807){
+                                        var alertPopup = $ionicPopup.alert({
+                                            title: '提示',
+                                            template: '设备离线'
+                                        });
+                                        alertPopup.then(function(res) {
+                                            console.log('Thank you for not eating my delicious ice cream cone');
+                                        });
+                                    }else {
+                                        var alertPopup = $ionicPopup.alert({
+                                            title: '<p class="title assertive" >失败</p>',
+                                            template: '<p>错误提示 ' +  data.errMsg + '</p>'
+                                        });
+                                    }
+
+                                }, function(err){
+                                    console.log(err);
+                                })
+                            } else {
+
+                            }
+                        });
+
+                    },
+                    getDeviceInfo: function(callback){
+                        $http.post(domain + '/device/info', {
+                            device_id: $scope.currentDevice.device_id
+
+                        } ).then(function(response){
+                            var data = response.data;
+                            console.log('-------------->', data)
+                            if(data.errorCode == 0){
+                                $scope.currentDevice.fingers = data.device.fingers;
+                                callback();
+                            }
+                        }, function(err){
+                            console.log(err);
+                        })
+                    },
+                    getAllRecord: function(){
+                        $http.post(domain + '/record/all', {
+                            //device_id: $scope.currentDevice.device_id
+                            device_id: $scope.currentDevice.device_id
+                        } ).then(function(response){
+                            var data = response.data;
+                            console.log('------记录------>', data)
+                            if(data.errorCode == 0){
+                                $scope.currentDevice.record = data.record;
+                            }
+                        }, function(err){
+                            console.log(err);
+                        })
+                    }
                 }
-                $scope.getUserList(device_id);
+                //
+                $scope.$watch('currentDevice.showPanel', function(showPanel){
+                    if(showPanel == 'status'){
+                        $scope.currentDevice.getDeviceStatus();
+                    }else if(showPanel == 'finger' ){
+                        $scope.currentDevice.getDeviceInfo(function(){});
+                    }else if(showPanel == 'record'){
+                        $scope.currentDevice.getAllRecord();
+                    }else {
+
+                    }
+                }, true);
+
+
             }]);
 
 

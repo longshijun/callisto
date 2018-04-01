@@ -12,11 +12,13 @@ var schema = new Schema({
     door: {
         type: Schema.Types.Mixed,
     },
+    type: {
+        type: Schema.Types.Mixed,
+    },
     alert: {
         type: String,
-        default: 'closed'
     },
-    time: { type : Date, default: moment(Date.now()).format('YYYY-MM-DD HH:mm:ss') },
+    time: { type : String, default: moment(Date.now()).format('YYYY-MM-DD HH:mm:ss') },
 
 });
 

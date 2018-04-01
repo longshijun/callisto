@@ -7,15 +7,19 @@ var fs = require('fs');
 var evHandler = require('./evHandler');
 var url = require('url');
 var deviceTrans = require('../controller/device');
+var _ = require('lodash');
 callisto.start();
 var sockets = {};
 
 
 setTimeout(function(){
    // console.log('---->', callisto.controller.socketio);
+    var openid = '';
     callisto.controller.socketio.of('/chat').on('connection', function (socket) {
+        console.log('connection ok');
         socket.on('client', function (data) {
-            var openid = data.openid;
+            console.log('收到了了数据：' ,data);
+            openid = data.openid;
             console.log('data from client:', data);
             if (!sockets[openid])
                 sockets[openid] = socket;
@@ -23,7 +27,7 @@ setTimeout(function(){
             delete sockets[openid];
         });
     });
-})
+});
 
 var options = {
     token: config.wx.token,
@@ -80,6 +84,8 @@ function handleUserToDeviceEvent(req, res, next) {
         case 'bind': {
 
             evHandler.handBind.call(self,  callisto.wechatInfo.access_token, device_id, message.FromUserName, function(err, result){
+
+                console.log('设备绑定结果--》', err, result);
                 if(err){
                     wechat.api.bindOperation({
                         device_id: device_id,
@@ -169,7 +175,7 @@ function handleUserToDeviceEvent(req, res, next) {
                 "cmd": 'getStatus',
                 "value": 0,
                 "deviceId": 43,
-                "mac": '845DD74D4D9A'
+                "mac": /*'845DD74D4D9A'*/device_id.toUpperCase()
             }, function(err, result){
 
                 console.log('subscribe_status --->', err, result);
@@ -238,7 +244,7 @@ function handleDeviceReport(req, res){
     var content = req.body.content;
     var buffer = new Buffer(content);
     console.log('收到了设备数据--->', req.body, new Buffer(content));
-    wechat.api.getDeviceStat(callisto.wechatInfo.access_token,  mac.toLowerCase(), function(err, result){
+    wechat.api.getDeviceStat(callisto.wechatInfo.access_token,  mac.toLowerCase(),  /*'845dd74a6c4b'*/ function(err, result){
 
         if(err){
             return res.send(err);
@@ -259,7 +265,7 @@ function handleDeviceReport(req, res){
                 var from = buffer[2];
                 if(from == 0x01){ // add 指纹OK
                     user.api.addFinger({
-                        device_id: mac.toLowerCase(),
+                        device_id: mac.toLowerCase() /*'845dd74a6c4b'*/,
                         id: finger
                     }, function(err, result){
                         if(err)
@@ -267,14 +273,45 @@ function handleDeviceReport(req, res){
                         //这里websocket通知add的结果前端
 
                         user.api.getDeviceByDeviceId({
-                            device_id: '845dd74a6c4b'
+                            device_id: mac.toLowerCase()
                         }, function(err, device){
                             if(err)
                                 return;
                             if(device && device.users[0].length){
                                 var openId = device.users[0];
-                                sockets[openId].emit('result', {errorCode: 0, errmsg:'指纹添加成功'});
+                                var socket = sockets[openId];
+                                if(socket)
+                                    socket.emit('fingerAdd', {errorCode: 0,  type:'fingerAdd', finger: finger});
+
                             }
+
+                            var bindSuccessInfo = config.wx.template.bindSuccessInfo;
+                            //设备绑定成功
+                            var nowtime = new Date().getFullYear() + '年' + (new Date().getMonth()+1) + '月' + new Date().getDate() + '日 '
+                                + new Date().getHours() + ':' + new Date().getMinutes()+ ':' + new Date().getSeconds();
+                            var data = {
+                                "first": {
+                                    "value": '设备指纹添加成功',
+                                    "color": "#173177"
+                                },
+                                "keyword1":{    //DeviceID
+                                    "value": 'mac  ' + mac  + '指纹id：' + finger,
+                                    "color": "#173177"
+                                },
+                                "keyword2": {  //device name
+                                    "value": '智能保险柜' ,
+                                    "color": "#173177"
+                                },
+                                "keyword3": {
+                                    "value": nowtime,
+                                    "color": "#173177"
+                                },
+                                "remark":{
+                                    "value": '',
+                                    "color": "#d11a19"
+                                }
+                            };
+                            callisto.wechatAPI.sendTemplate(openId, bindSuccessInfo, null, data, function(){});
 
                             res.send({
                                 errorcode:0,
@@ -283,30 +320,8 @@ function handleDeviceReport(req, res){
                         });
 
                     });
-                }else if(from == 0x02){ //remove 指纹OK
-                    user.api.removeFinger({
-                        device_id: mac,
-                        id: finger
-                    }, function(err, result){
-                        if(err)
-                            return console.log(err);
+                }else if(from == 0x02){ //指纹添加失败K
 
-                        user.api.getDeviceByDeviceId({
-                            device_id: '845dd74a6c4b'
-                        }, function(err, device){
-                            if(err)
-                                return;
-                            if(device && device.users[0].length){
-                                var openId = device.users[0];
-                                sockets[openId].emit('result', {errorCode: 0, errmsg:'指纹删除成功'});
-                            }
-
-                            res.send({
-                                errorcode:0,
-                                errmsg:'删除指纹成功'
-                            })
-                        });
-                    })
                 }
                 break;
             case 0x04: //开门
@@ -314,52 +329,92 @@ function handleDeviceReport(req, res){
                 // 微信通过模板消息的方式发送给微信客户端
                 // 同时保存数据库
                 //   console.log('开门指纹--》', fingerId);
-                user.api.setDoorRecord('845dd74a6c4b', {
-                    state: 'open',
-                    fingerId: fingerId
-                }, function(err, result){
-                    console.log('智能柜开门操作--->', err, result);
-                    var alertInfo = config.wx.template.alertInfo;
-                    //设备绑定成功
-                    var nowtime = new Date().getFullYear() + '年' + (new Date().getMonth()+1) + '月' + new Date().getDate() + '日 '
-                        + new Date().getHours() + ':' + new Date().getMinutes()+ ':' + new Date().getSeconds();
-                    var data = {
-                        "first": {
-                            "value": '报警提醒',
-                            "color": "#173177"
-                        },
-                        "keyword1":{    //DeviceID
-                            "value": '智能保险柜开门提醒, 设备id: ' + mac,
-                            "color": "#173177"
-                        },
-                        "keyword2":{    //DeviceID
-                            "value": '智能保险柜出现开门操作，请确保是本人操作！',
-                            "color": "#173177"
-                        },
+                var warningText = '智能保险柜出现开门操作，请确保是本人操作！';
+                user.api.getDeviceByDeviceId({
+                    device_id: mac.toLowerCase() // mac.toLowerCase
+                }, function(err, device){
+                    if(err)
+                        return;
+                    var openId = device.users[0];
 
-                        "remark":{
-                            "value": '时间：' + nowtime,
-                            "color": "#d11a19"
-                        }
-                    };
-
-                    user.api.getDeviceByDeviceId({
-                        device_id: '845dd74a6c4b'
-                    }, function(err, device){
-                        if(err)
-                            return;
-                        var openId = device.users[0];
-                        callisto.wechatAPI.sendTemplate(openId, alertInfo, null, data, function(){});
+                    var index = _.findIndex(device.fingers, function(chr) {
+                        return chr.id == fingerId;
                     });
-                })
+
+                    var saveDoorOpen = function(type, finger){
+                        console.log('智能柜开门操作--->', finger);
+                        user.api.setDoorRecord(mac.toLowerCase(), type, {
+                            state: warningText,
+                            finger: finger
+                        }, function(err, result){
+
+                            var alertInfo = config.wx.template.alertInfo;
+                            //设备绑定成功
+                            var nowtime = new Date().getFullYear() + '年' + (new Date().getMonth()+1) + '月' + new Date().getDate() + '日 '
+                                + new Date().getHours() + ':' + new Date().getMinutes()+ ':' + new Date().getSeconds();
+                            var data = {
+                                "first": {
+                                    "value": '报警提醒',
+                                    "color": "#173177"
+                                },
+                                "keyword1":{    //DeviceID
+                                    "value": '智能保险柜开门提醒, 设备id: ' + mac,
+                                    "color": "#173177"
+                                },
+                                "keyword2":{    //DeviceID
+                                    "value": '智能保险柜出现开门操作，请确保是本人操作！',
+                                    "color": "#173177"
+                                },
+
+                                "remark":{
+                                    "value": '时间：' + nowtime,
+                                    "color": "#d11a19"
+                                }
+                            };
+                            callisto.wechatAPI.sendTemplate(openId, alertInfo, null, data, function(){});
+
+                        })
+
+                    }
+
+                    if(index > -1){
+                        saveDoorOpen('door', device.fingers[index]);
+                    }else{
+                        saveDoorOpen('door', {
+                            id: fingerId,
+                            name:'未知指纹'
+                        });
+                    }
+
+
+
+                });
+
                 break;
             case 0x05:// 警告
-                var id =  buffer[buffer.length - 1];
+                //var warningId =  buffer[buffer.length - 1];
                 //模板消息
                 var errorInfo = config.wx.template.errorInfo;
                 //设备绑定成功
                 var nowtime = new Date().getFullYear() + '年' + (new Date().getMonth()+1) + '月' + new Date().getDate() + '日 '
                     + new Date().getHours() + ':' + new Date().getMinutes()+ ':' + new Date().getSeconds();
+                var warningId =  buffer[2];
+                var warningText = '';
+                switch (warningId){
+                    case 1:
+                        warningText = '保险柜被移动';
+                        break;
+                    case 2:
+                        warningText = '连续输错密码3次';
+                        break;
+                    case 3:
+                        warningText = '忘记关门';
+                        break;
+                    default:
+                        warningText = '保险柜出现了警告，请及时查看！';
+
+                }
+                console.log('警告id:', buffer, warningId, warningText);
                 var data = {
                     "first": {
                         "value": '故障提醒',
@@ -370,7 +425,7 @@ function handleDeviceReport(req, res){
                         "color": "#173177"
                     },
                     "keyword2":{    //DeviceID
-                        "value": '智能保险柜出现故障，可能被撬开了，请确保是本人操作！',
+                        "value": '警告：' + warningText,
                         "color": "#173177"
                     },
 
@@ -381,14 +436,14 @@ function handleDeviceReport(req, res){
                 };
 
                 user.api.getDeviceByDeviceId({
-                    device_id: '845dd74a6c4b'
+                    device_id: mac.toLowerCase()
                 }, function(err, device){
                     if(err)
                         return;
                     var openId = device.users[0];
 
-                    user.api.setDoorRecord(mac.toLowerCase(), {
-                        alert: 'open'
+                    user.api.setDoorRecord(/*mac.toLowerCase()*/ mac.toLowerCase(), 'alert', {
+                        alert: warningText,
                     }, function(err){
                         if(err)
                             return res.send('报警记录保存失败');
@@ -403,22 +458,83 @@ function handleDeviceReport(req, res){
                 var moistureS = buffer[5];
                 var status = {};
                 status.tempeture = tempH + '.' + tempS;
-                status.moisture = moistureH + '.' + moistureS;/*
-             user.api.updateDeviceStatus(mac.toLowerCase(), status, function(err){
-             if(err)
-             return console.log('上报状态保存错误---->', err);
-
-             });*/
+                status.moisture = moistureH + '.' + moistureS;
+                console.log('获得温度湿度：', status);
                 user.api.getDeviceByDeviceId({
-                    device_id: '845dd74a6c4b'
+                    device_id: mac.toLowerCase()
                 }, function(err, device){
                     if(err)
                         return;
                     if(device && device.users[0].length){
                         var openId = device.users[0];
-                        sockets[openId].emit('status', status);
+                        var socket = sockets[openId];
+                        if(socket)
+                            socket.emit('status', status);
+                        console.log('发送数据ok:', status);
                     }
                 });
+
+                break;
+            case 0x07: //指纹删除请求
+                var finger = buffer[buffer.length - 1] ;
+                var from = buffer[2];
+                if(from == 0x01){
+                    user.api.removeFinger({
+                        device_id: mac.toLowerCase(),
+                        id: finger
+                    }, function(err, result){
+                        if(err)
+                            return console.log(err);
+
+                        user.api.getDeviceByDeviceId({
+                            device_id: mac.toLowerCase()
+                        }, function(err, device){
+                            if(err)
+                                return;
+                            if(device && device.users[0].length){
+                                var openId = device.users[0];
+                                var socket = sockets[openId];
+                                if(socket)
+                                    socket.emit('fingerRemove', {errorCode: 0, type:'fingerRemove', finger: finger});
+
+                                var bindSuccessInfo = config.wx.template.bindSuccessInfo;
+                                //设备绑定成功
+                                var nowtime = new Date().getFullYear() + '年' + (new Date().getMonth()+1) + '月' + new Date().getDate() + '日 '
+                                    + new Date().getHours() + ':' + new Date().getMinutes()+ ':' + new Date().getSeconds();
+                                var data = {
+                                    "first": {
+                                        "value": '设备指纹删除成功',
+                                        "color": "#173177"
+                                    },
+                                    "keyword1":{    //DeviceID
+                                        "value": 'mac  ' + mac  + '指纹id：' + finger,
+                                        "color": "#173177"
+                                    },
+                                    "keyword2": {  //device name
+                                        "value": '智能保险柜' ,
+                                        "color": "#173177"
+                                    },
+                                    "keyword3": {
+                                        "value": nowtime,
+                                        "color": "#173177"
+                                    },
+                                    "remark":{
+                                        "value": '',
+                                        "color": "#d11a19"
+                                    }
+                                };
+                                callisto.wechatAPI.sendTemplate(openId, bindSuccessInfo, null, data, function(){});
+
+                            }
+                            res.send({
+                                errorcode:0,
+                                errmsg:'删除指纹成功'
+                            })
+                        });
+                    })
+                }else{
+
+                }
 
                 break;
         }

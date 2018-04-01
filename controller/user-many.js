@@ -364,9 +364,61 @@ var removeFinger = function(param, callback){
     });
 }
 
+//给指定的指纹命名
+/*
+    device_id
+    id 指纹id
+    name
+ */
+
+var updateFingerName = function(param, callback){
+    wxDevice.findOne({
+        device_id: param.device_id
+    }, function(err, device){
+        if(err)
+            return callback(err);
+
+        if(!device ||  device.users.length == 0)
+            return callback({
+                errorCode: 20003,
+                errMsg:'您还未绑定设备'
+            });
+        var index = _.findIndex(device.fingers, function(chr) {
+            return chr.id == param.id;
+        });
+        if(index  > -1){
+            device.fingers[index].name = param.name;
+            device.save(function(err, device){
+                if(err)
+                    return callback(err);
+                return callback(null, {
+                    errorCode:0,
+                    errMsg:'ok'
+                });
+            })
+        }else
+            return callback({
+                errorCode: 30001,
+                errMsg:'该指纹不存在'
+            });
+    })
+}
+
+
+//修改设备名
+
+var updateDeviceName = function(device_id, name, callback){
+    wxDevice.findOne({
+        device_id: device_id
+    }, function(err, device){
+        if(err)
+            return callback(err);
+    })
+}
 // 报警和开门记录操作
 
-var setDoorRecord = function(device_id, param, callback){
+var setDoorRecord = function(device_id, type,  param, callback){
+
     wxDevice.findOne({
         device_id: device_id
     }, function(err, device){
@@ -377,58 +429,60 @@ var setDoorRecord = function(device_id, param, callback){
                 errorCode: 20003,
                 errMsg:'您还未绑定设备'
             });
+        console.log('设置开门记录-->', device_id, type,  param);
 
-        var warning = {};
-        if(param.fingerId != undefined){
-            var state = param.state || 'closed';
-            var fingerId = param.fingerId;
-            warning = {
-                device_id: device_id,
-                door: {
-                    state: state, //开门记录
-                    fingerId: fingerId
-                },
-                time:  moment(Date.now()).format('YYYY-MM-DD HH:mm:ss')
+
+        if(type == 'door'){
+            if(param.finger.id != undefined){ //设置是否开门
+
+                var state = param.state || '门被打开了请及时查看';
+                //   var fingerId = param.finger.id;
+                var warning = {
+                    device_id: device_id,
+                    door: {
+                        state: state, //开门记录
+                        finger: param.finger
+                    },
+                    type: type,
+                    time:  moment(Date.now()).format('YYYY-MM-DD HH:mm:ss')
+                }
+                var record = new Record(warning);
+                record.save(function(err, record){
+                    if(err)
+                        return callback(err);
+                    return  callback(null);
+                })
             }
-        }else{
-            var alert = param.alert || 'closed';
-            waning = {
+        }else if(type == 'alert'){
+            console.log('我擦，收到警告了', type, param);
+
+            var alert = param.alert || '设备出现警告，请及时查看';
+            var warning = {
                 device_id: device_id,
+                type: type,
                 time:  moment(Date.now()).format('YYYY-MM-DD HH:mm:ss'),
                 alert: alert
             }
+            console.log('我擦，保存警告了', type, warning);
+            var record = new Record(warning);
+            record.save(function(err, record){
+                if(err)
+                    return callback(err);
+                return  callback(null);
+            })
         }
-        var record = new Record(waning);
-        record.save(function(err, record){
-            if(err)
-                return callback(err);
-            return  callback(null);
-        })
-
     });
 }
 
 var getAllRecord = function(device_id, callback){
-    wxDevice.findOne({
+    Record.find({
         device_id: device_id
-    }), function(err, device){
+    }).sort({time: -1}).exec(function(err, result){
         if(err)
             return callback(err);
-
-        if(!device  || !device.users.length)
-            return callback({
-                errorCode: 20003,
-                errMsg:'您还未绑定设备'
-            });
-
-            Record.find({
-                device_id: device_id
-            }, function(err, result){
-                if(err)
-                    return callback(err);
-                return callback(null, result);
-            })
-    };
+        console.log(err, result);
+        return callback(null, result);
+    })
 }
 
 // start_time : 2017-10-20 10:00:00
@@ -446,17 +500,18 @@ var getRecordByTime = function(device_id, start_time, end_time, callback){
                 errorCode: 20003,
                 errMsg:'您还未绑定设备'
             });
+
         Record.find({
             device_id: device_id,
             time: {
                 "$lt": start_time,
                 "$gte": end_time
             }
-        }, function(err, result){
+        }).sort({time : -1}).exec(function(err, result){
             if(err)
                 return callback(err);
             return callback(null, result);
-        })
+        });
     };
 }
 
@@ -525,10 +580,13 @@ module.exports.api = {
     getDeviceByDeviceId: getDeviceByDeviceId,
     updateDeviceStatus:updateDeviceStatus,
     getDeviceStatus:getDeviceStatus,
+    updateDeviceName:updateDeviceName,
     addFinger: addFinger,
     removeFinger: removeFinger,
+    updateFingerName:updateFingerName,
     getRecordByTime: getRecordByTime,
-    setDoorRecord:setDoorRecord
+    setDoorRecord:setDoorRecord,
+    getAllRecord: getAllRecord
 }
 
 //getUserByOpenid(1234423);

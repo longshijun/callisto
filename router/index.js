@@ -5,6 +5,7 @@ var config = require('../config');
 router.post('/wechat',  middleWare.handleWechat);
 router.post('/device/report', middleWare.handleDeviceReport);
 var controller = require('../controller/index');
+/*
 router.get('/user/page', function(req, res){
     controller.silentAuthorization(req, config, function(err, result){
         if(err)
@@ -15,13 +16,19 @@ router.get('/user/page', function(req, res){
         })
     });
 });
+*/
 
 
 router.post('/user/finger/add', controller.addFinger);
 
-
 router.post('/user/list', controller.getUserList);
 router.post('/device/list', controller.getDeviceList);
 router.get('/device/list', controller.renderDeviceList);
+router.post('/device/status', controller.getDeviceStatus);
+router.post('/device/addFinger', controller.addFinger);
+router.post('/device/removeFinger', controller.removeFinger);
+router.post('/device/updateFingerName', controller.updateFingerName);
+router.post('/device/info', controller.getDeviceInfo);
+router.post('/record/all', controller.getAllRecord);
 router.post('/user/unbind', controller.unbind);
 module.exports = router;

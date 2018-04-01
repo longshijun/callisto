@@ -18,7 +18,13 @@ callisto.controller.socketio = io;
 app.set('views', path.join(__dirname, 'views'));
 app.set('views', path.join(__dirname, 'public'));
 app.set('view engine', 'ejs');
-
+/*app.all('*', function(req, res, next) {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header('Access-Control-Allow-Methods', 'PUT, GET, POST, DELETE, OPTIONS');
+    res.header("Access-Control-Allow-Headers", "X-Requested-With");
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    next();
+});*/
 app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -38,7 +44,8 @@ function sha1(str) {
     shasum.update(str);
     return shasum.digest('hex');
 }
-/*app.use('/wechat',function(req, res, next){
+/*
+app.use('/wechat',function(req, res, next){
     var query = url.parse(req.url,true).query;
     var signature = query.signature;
     var echostr = query.echostr;
@@ -61,7 +68,8 @@ function sha1(str) {
         res.end("false");
         console.log("Failed!");
     }
-})*/
+})
+*/
 
 app.use(router);
 server.listen(80);

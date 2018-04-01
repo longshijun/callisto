@@ -497,7 +497,7 @@ module.exports.api = {
     getUsersByDeviceId:getUsersByDeviceId,
     updateDeviceStatus:updateDeviceStatus,
     getDeviceStatus:getDeviceStatus,
-    getDeviceByOpenid:getDeviceByOpenId
+    getDeviceByOpenId:getDeviceByOpenId
 
 }
 

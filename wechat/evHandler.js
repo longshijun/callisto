@@ -5,10 +5,6 @@ module.exports = {
     handBind: function(access_token, device_id, openid, callback){
         var self = this;
 
-        wechat.api.getDeviceStat(access_token, device_id, function(err, result){
-
-        });
-
         // 强行微信绑定设备
         user.api.bindDevice({
             openid: openid,
