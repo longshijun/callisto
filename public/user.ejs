@@ -90,7 +90,7 @@
                                 show-delete="false"
                                 show-reorder="false"
                                 can-swipe="true">
-                            <ion-item  ng-repeat="item in currentDevice.fingers" ng-click="goState($event, 'tabs.device', item)" >
+                            <ion-item  ng-repeat="item in currentDevice.fingers" >
 
                                 <p>指纹 &nbsp;{{item.id}}, {{item.name}}</p>
                                 <ion-option-button class="button-positive"
@@ -165,7 +165,8 @@
 <script>
     //var openid = 'oPT65swCoTFgQYMvDIOSgXY0Mwbc';
     //var openid = 'oPT65swCoTFgQYMvDIOSgXY0Mwbc';
-    var openid = 'oPT65s7lK8bdpLdLtLomWpPqceqk';
+   // var openid = 'oPT65szSwRIXEgyW3YKUJyOcZILA';
+    var openid = '<%= openid%>';
     var domain = 'http://weixin.china-pingan.com';
     angular.module('starter', ['ionic'])
 
@@ -291,22 +292,45 @@
                     $scope.socket.emit('client',  {openid: openid});
                   //  alert('connection success');
                 }).on('status', function(data){
-                    alert(JSON.stringify(data));
+                   // alert(JSON.stringify(data));
                     $scope.currentDevice.status = data;
                     $scope.$apply();
                 }).on('fingerAdd', function(data){
                     if(data.errorCode == 0 && data.type == 'fingerAdd')
                         $scope.currentDevice.getDeviceInfo(function(){
                             $scope.$apply();
+                            var alertPopup = $ionicPopup.alert({
+                                title: '提示',
+                                template: '<p>指纹添加成功</p>'
+                            });
                         });
                 }).on('fingerRemove', function(data){
                     if(data.errorCode == 0 && data.type == 'fingerRemove')
                         $scope.currentDevice.getDeviceInfo(function(){
                             $scope.$apply();
-                            alert('指纹删除成功');
+                            var alertPopup = $ionicPopup.alert({
+                                title: '提示',
+                                template: '<p>指纹删除成功</p>'
+                            });
                         });
 
-                });
+                }).on('removeAll', function(data){
+                    if(data.errorCode == 0){
+                        $scope.currentDevice.getDeviceInfo(function(){});
+                        var alertPopup = $ionicPopup.alert({
+                            title: '提示',
+                            template: '<p>指纹记录全部删除成功</p>'
+                        });
+                    } else{
+                        var alertPopup = $ionicPopup.alert({
+                            title: '提示',
+                            template: '<p>指纹记录全部删除失败</p>'
+                        });
+                    }
+
+                }).on('record', function(){
+                    $scope.currentDevice.getAllRecord(function(){});
+                })
 
                 $scope.currentArr = {}
 
@@ -359,7 +383,6 @@
                                             e.preventDefault();
 
                                         } else {
-
                                             $http.post(domain + '/device/updateFingerName', {
                                                 device_id: $scope.currentDevice.device_id,
                                                 fingerId: item.id,
@@ -367,9 +390,15 @@
                                             } ).then(function(response){
                                                 var data = response.data;
                                                 console.log('-------------->', data)
+                                                $scope.currentDevice.getDeviceInfo(function(){});
+                                                $scope.currentArr = {};
                                                 if(data.errorCode == 0){
                                                     $scope.currentDevice.fingers = data.device.fingers;
                                                     $scope.currentArr.name = undefined;
+                                                    var alertPopup = $ionicPopup.alert({
+                                                        title: '提示',
+                                                        template: '<p> 修改成功！ </p>'
+                                                    });
                                                     callback();
 
                                                 }
@@ -434,7 +463,7 @@
                     removeFinger: function(item){
                         var confirmPopup = $ionicPopup.confirm({
                             title: '指纹删除请求？',
-                            template: '<h4>请求发送后需要将手指放在设备上等待删除指纹</h4>'
+                            template: '<h4>是否确定删除该指纹？</h4>'
                         });
                         confirmPopup.then(function(res) {
                             if(res) {

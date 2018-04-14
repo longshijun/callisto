@@ -170,12 +170,19 @@ module.exports = {
                     errMsg:'用户指纹数量已超过上线'
                 });
 
+            console.log("device.fingers:", device.fingers)
+
             if(device.fingers.length > 0){
-                for(var index in device.fingers){
-                    fingers.push(device.fingers[index].id);
+                for(var index=0; index< device.fingers.length; index++){
+                    if(device.fingers[index].id != NaN)
+                        fingers.push(parseInt(device.fingers[index].id));
+                    else
+                        fingers.push(0)
                 }
             }
-            console.log('发送了指纹添加请求--', deviceTrans.getFinger(fingers) );
+            console.log('fingers--', fingers );
+
+//            console.log('发送了指纹添加请求--', deviceTrans.getFinger(fingers) );
             deviceTrans.sendToDevice({
                 "messageCode": 68,
                 "cmd": 'addFinger',
@@ -209,6 +216,8 @@ module.exports = {
         var device_id = req.body.device_id;
         var fingerId = req.body.fingerId;
         var name = req.body.name;
+
+        console.log('更新指纹名字：', req.body);
         if (!device_id || !fingerId == undefined)
             return res.send({
                 errorCode: 40001,
@@ -222,7 +231,7 @@ module.exports = {
             });
         user.api.updateFingerName({
             device_id: device_id,
-            fingerId: fingerId,
+            id: fingerId,
             name: name || ''
         }, function (err, result) {
             if(err)
@@ -235,6 +244,7 @@ module.exports = {
 
         })
     },
+
 
     removeFinger: function(req, res){
         var device_id = req.body.device_id;
@@ -304,11 +314,29 @@ module.exports = {
         }, function(err, result){
             if(err)
                 return res.reply(err);
-            var r = {
-                errorCode: err || 0,
-                errMsg:'ok'
-            }
-            return res.send(r);
+            user.api.removeAllFingers(device_id, function(err){
+
+                user.api.removeAllRecords(device_id, function(){})
+
+                deviceTrans.sendToDevice({
+                    "messageCode": 68,
+                    "cmd": 'removeAllFingers',
+                    "value": 0,
+                    "deviceId": 43,
+                    "mac": device_id
+                }, function(err, result){
+
+                    if(err)
+                        return res.send(err);
+                    var r = {
+                        errorCode: 0,
+                        errMsg:'ok'
+                    }
+                    return res.send(r);
+
+                });
+            });
+
         });
     },
     getAllRecord: function(req, res){
@@ -343,14 +371,14 @@ module.exports = {
         console.log('------->', req.url);
 
 
-        res.render('user');
+    //    res.render('user');
 
-       /* silentAuthorization(req, config, function(err, openid){
+        silentAuthorization(req, config, function(err, openid){
             console.log('授权OK:', openid);
             res.render('user', {
                 openid: openid
             });
-        })*/
+        })
 
     }
 

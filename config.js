@@ -12,18 +12,18 @@ var wechat = {
     "database":"callisto",
 
     "wx": {
-/*        "appid": "wx1b43042ea6429da7",
-        "secret": "fb7a610e1ff1cd2d87033ba821dd42ea",*/
+        "appid": "wx1b43042ea6429da7",
+        "secret": "fb7a610e1ff1cd2d87033ba821dd42ea",
         "scope"  : 'snsapi_base',//snsapi_userinfo snsapi_base
 
         //wukoon
-         "appid":"wxc5fd7915e305622c",
-         "secret":"e852f98982ed0870fbd3a953222c43fd",
+        /* "appid":"wxc5fd7915e305622c",
+         "secret":"e852f98982ed0870fbd3a953222c43fd",*/
         "token":"1234567890",
         "weixin_hostname" : "api.weixin.qq.com",
         "weixin_port"     : 443,
         "weixin_primitive_ID": "gh_eb1d2050fea3", // wukoon gh_a1add65ebcdf
-        "product_id":46085,
+        "product_id":46160,
         "type":"fridge",
         "template":{
             bindSuccessInfo: 'hbO4HYlpnW6GfxC29J1e49gMAGWwQOCNoESVzjLJM_c',
@@ -67,8 +67,8 @@ var wechat = {
                         {
                             "type": "view",
                             "name": "我的设备",
-                            "url": domain_name + '/device/list'
-                  /*          "url": convertToAuthorizeURL(domain_name + '/device/list', 'wx1b43042ea6429da7',  'fb7a610e1ff1cd2d87033ba821dd42ea', 'snsapi_base')*/
+                           /* "url": domain_name + '/device/list'*/
+                            "url": convertToAuthorizeURL(domain_name + '/device/list', 'wx1b43042ea6429da7',  'fb7a610e1ff1cd2d87033ba821dd42ea', 'snsapi_base')
                         }
                     ]
                 }

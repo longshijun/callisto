@@ -106,18 +106,18 @@ exports.sendToDevice = function(data, callback){
 exports.getFinger = function(arr){
 
     if(arr.length == 0){
-        arr.push(0);
+        arr.push(1);
         return arr[0];
     } else if(arr.length == 1){
-        if(arr[0] == 0){
+        if(arr[0] == 1){
             arr.push(arr[arr.length-1] + 1);
             return arr[arr.length-1];
         } else{
             arr.unshift(arr[arr.length - 1] - 1);
-            return arr[0];
+            return arr[1];
         }
     }else if(arr.length > 1){
-        if(arr[0] == 0 ){
+        if(arr[0] == 1 ){
             for(var i=0; i<arr.length; i++){
 
                 if(arr.length - 1 == i){

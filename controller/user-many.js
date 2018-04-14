@@ -201,7 +201,7 @@ var removeUser = function(openid,   callback){
                             if(err)
                                 return callback(err);
                             callback(null);
-                        })
+                        });
                     }else{
                         device.save(function(err, device){
                             if(err)
@@ -255,6 +255,46 @@ var updateDeviceStatus  = function(device_id,  status, callback){
     })
 };
 
+var removeAllRecords = function(device_id, callback){
+    Record.remove({
+        device_id: device_id
+    }, function(err){
+        if(err)
+            return callback(err);
+        return callback(null);
+    })
+}
+
+var removeAllFingers = function(device_id, callback){
+    wxDevice.findOne({
+        device_id: device_id
+    }, function(err, device){
+        if(err)
+            return callback(err);
+
+        if(!device)
+             return callback({
+            errorCode: 3012,
+            errmsg:'用户没有绑定该设备'
+        });
+
+        device.fingers = [];
+        device.save(function(err){
+            if(err)
+                return callback(err);
+            Record.remove({
+                device_id: device_id
+            }, function(err){
+                if(err)
+                    return callback(err);
+                return callback(null);
+            })
+
+        });
+
+    });
+}
+
 var getDeviceStatus = function(device_id, callback){
     wxDevice.findOne({
         device_id: device_id
@@ -264,6 +304,9 @@ var getDeviceStatus = function(device_id, callback){
         return callback(device.status);
     });
 }
+
+
+
 
 /*
 *   device_id
@@ -378,16 +421,24 @@ var updateFingerName = function(param, callback){
         if(err)
             return callback(err);
 
+
+
         if(!device ||  device.users.length == 0)
             return callback({
                 errorCode: 20003,
                 errMsg:'您还未绑定设备'
             });
+
         var index = _.findIndex(device.fingers, function(chr) {
             return chr.id == param.id;
         });
+        console.log("updateFingerName:", device.fingers, param, index);
         if(index  > -1){
-            device.fingers[index].name = param.name;
+
+            var temp = JSON.parse(JSON.stringify( device.fingers));
+            device.fingers = [];
+            temp[index].name = param.name;
+            device.fingers = temp;
             device.save(function(err, device){
                 if(err)
                     return callback(err);
@@ -586,7 +637,9 @@ module.exports.api = {
     updateFingerName:updateFingerName,
     getRecordByTime: getRecordByTime,
     setDoorRecord:setDoorRecord,
-    getAllRecord: getAllRecord
+    getAllRecord: getAllRecord,
+    removeAllFingers:removeAllFingers,
+    removeAllRecords:removeAllRecords
 }
 
 //getUserByOpenid(1234423);

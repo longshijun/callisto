@@ -372,6 +372,10 @@ function handleDeviceReport(req, res){
                                 }
                             };
                             callisto.wechatAPI.sendTemplate(openId, alertInfo, null, data, function(){});
+                            res.send({
+                                errorcode:0,
+                                errmsg:'保存开门操作成功'
+                            });
 
                         })
 
@@ -446,8 +450,31 @@ function handleDeviceReport(req, res){
                         alert: warningText,
                     }, function(err){
                         if(err)
-                            return res.send('报警记录保存失败');
+                            return res.send({
+                                errorcode: -1,
+                                errmsg:'保存开门操作失败'
+                            });
                         callisto.wechatAPI.sendTemplate(openId, errorInfo, null, data, function(){});
+
+                        user.api.getDeviceByDeviceId({
+                            device_id: mac.toLowerCase()
+                        }, function(err, device){
+                            if(err)
+                                return ;
+                            if(device && device.users[0].length){
+                                var openId = device.users[0];
+                                var socket = sockets[openId];
+                                if(socket)
+                                    socket.emit('record', {errorCode: 0, type:'record' });
+                            }
+                            res.send({
+                                errorcode:0,
+                                errmsg:'保存开门操作成功'
+                            });
+                        })
+
+
+
                     });
                 });
                 break;
@@ -533,6 +560,32 @@ function handleDeviceReport(req, res){
                         });
                     })
                 }else{
+
+                }
+
+                break;
+            case 0x09: //删除所有指纹
+                var type = buffer[buffer.length - 1] ;
+                user.api.removeAllRecords(mac.to, function(){});
+
+                if(type == 0x01){
+                    user.api.getDeviceByDeviceId({
+                        device_id: mac.toLowerCase()
+                    }, function(err, device){
+                        if(err)
+                            return;
+                        if(device && device.users[0].length){
+                            var openId = device.users[0];
+                            var socket = sockets[openId];
+                            user.api.removeAllFingers(mac.toLowerCase(), function(err){
+                                user.api.removeAllRecords(mac.toLowerCase(), function(){})
+                                if(socket)
+                                    socket.emit('removeAll', {errorCode: 0, type:'fingerRemove', errmsg:'指纹全部删除成功'  });
+                            });
+                        }
+
+                    })
+                }else if(type == 0x02){
 
                 }
 

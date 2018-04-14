@@ -1,6 +1,7 @@
 var wechat = require('../controller/wechat');
 var user = require('../controller/user-many');
 var async  = require('async');
+var deviceTrans = require('../controller/device');
 module.exports = {
     handBind: function(access_token, device_id, openid, callback){
         var self = this;
@@ -54,6 +55,7 @@ module.exports = {
                 if(err)
                     return callback(err);
                 console.log('数据库解绑-->', err, result);
+                user.api.removeAllRecords(param.device_id, function(){})
                 return callback(null, result);
             });
         });
@@ -62,11 +64,21 @@ module.exports = {
         user.api.getUserByOpenid(openid, function(err, result){
             if(err) return callback(err);
             async.eachSeries(result.device, function(device_id, callback) {
+                user.api.removeAllRecords(device_id, function(){});
+                deviceTrans.sendToDevice({
+                    "messageCode": 68,
+                    "cmd": 'removeAllFingers',
+                    "value": 0,
+                    "deviceId": 43,
+                    "mac": device_id
+                }, function(err){});
+
                 wechat.api.bindOperation({
                     device_id: device_id,
                     openid: openid
                 }, 'compel_unbind', access_token, function(err, result){
                     console.log('微信解绑---》', err, result);
+
                     if(err)
                         return callback(err);
                      else
