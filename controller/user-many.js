@@ -137,6 +137,11 @@ var unbindDevice = function(param, callback){
             }, function(err, device){
                 if(err)
                     return callback(err);
+                if(!device || !device.users)
+                    return callback({
+                        errorCode:20301,
+                        errMsg:'设备已经无绑定用户！'
+                    });
                 var hasUser = device.users.indexOf(param.openid);
                 if(hasUser > -1){
                     device.users.splice(hasUser, 1);

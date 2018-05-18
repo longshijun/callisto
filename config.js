@@ -26,7 +26,7 @@ var wechat = {
         "product_id":46160,
         "type":"fridge",
         "template":{
-            bindSuccessInfo: 'hbO4HYlpnW6GfxC29J1e49gMAGWwQOCNoESVzjLJM_c',
+            bindSuccessInfo: 'C3j3TrwuR6jFkJIhPVILbofYgn6VAw1GTXzWcTHRoCU',
             /*
              {first.DATA}}
              设备ID：{{keyword1.DATA}}
@@ -43,14 +43,14 @@ var wechat = {
                  {{remark.DATA}}
 
              */
-            alertInfo: 'JxWJ176rF9P8QctbrAYux3z96s7X2E8wxnwKpE4g0cE',
+            alertInfo: 'dsxSbHJKXWFlONO3o1xQnDzSsqdvyrvl7Dz8Yi1xk8A',
             /*
              {{first.DATA}}
              设备类型：{{keyword1.DATA}}
              告警内容：{{keyword2.DATA}}
              {{remark.DATA}}
              */
-            errorInfo: 'n4feitCslnjoKx-3h82VX1jyoXHpui8Odj603QDFsnI'
+            errorInfo: 'dsxSbHJKXWFlONO3o1xQnDzSsqdvyrvl7Dz8Yi1xk8A'
                 /*
                      {{first.DATA}}
                      故障类型：{{keyword1.DATA}}

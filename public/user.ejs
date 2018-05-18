@@ -16,8 +16,6 @@
 
     <script id="templates/home.html" type="text/ng-template">
         <ion-view view-title="我的设备">
-
-
             <h3  class="title" ng-if="user.device.length == 0">
                 您暂无绑定设备
             </h3>
@@ -281,46 +279,63 @@
 
             }])
 
-            .controller('deviceController', ['$scope', '$stateParams', '$http', '$ionicPopup',
-                function($scope, $stateParams, $http, $ionicPopup){
+            .controller('deviceController', ['$scope', '$stateParams', '$http', '$ionicPopup', '$timeout',
+                function($scope, $stateParams, $http, $ionicPopup,$timeout){
                 console.log('-------------->', $stateParams);
                  $scope.socket = io.connect( domain + '/chat');
 
                 $scope.socket.on('data', function (data) {
 
                 }).on('connect', function(){
+
                     $scope.socket.emit('client',  {openid: openid});
+                //    alert('客户端连接成功!');
                   //  alert('connection success');
                 }).on('status', function(data){
                    // alert(JSON.stringify(data));
-                    $scope.currentDevice.status = data;
-                    $scope.$apply();
+                    $timeout(function(){
+                        $scope.currentDevice.status = data;
+                        $scope.$apply();
+                    });
+
+                   // $scope.$apply();
                 }).on('fingerAdd', function(data){
                     if(data.errorCode == 0 && data.type == 'fingerAdd')
-                        $scope.currentDevice.getDeviceInfo(function(){
-                            $scope.$apply();
-                            var alertPopup = $ionicPopup.alert({
-                                title: '提示',
-                                template: '<p>指纹添加成功</p>'
+                        $timeout(function(){
+                            $scope.currentDevice.getDeviceInfo(function(){
+                                $scope.$apply();
+                                var alertPopup = $ionicPopup.alert({
+                                    title: '提示',
+                                    template: '<p>指纹添加成功</p>'
+                                });
                             });
-                        });
+                        })
+
                 }).on('fingerRemove', function(data){
                     if(data.errorCode == 0 && data.type == 'fingerRemove')
-                        $scope.currentDevice.getDeviceInfo(function(){
-                            $scope.$apply();
-                            var alertPopup = $ionicPopup.alert({
-                                title: '提示',
-                                template: '<p>指纹删除成功</p>'
+                        $timeout(function(){
+                            $scope.currentDevice.getDeviceInfo(function(){
+                                $scope.$apply();
+                                var alertPopup = $ionicPopup.alert({
+                                    title: '提示',
+                                    template: '<p>指纹删除成功</p>'
+                                });
                             });
                         });
 
+
                 }).on('removeAll', function(data){
                     if(data.errorCode == 0){
-                        $scope.currentDevice.getDeviceInfo(function(){});
-                        var alertPopup = $ionicPopup.alert({
-                            title: '提示',
-                            template: '<p>指纹记录全部删除成功</p>'
-                        });
+                        $timeout(function(){
+                            $scope.currentDevice.getDeviceInfo(function(){
+                                $scope.$apply();
+                            });
+                            var alertPopup = $ionicPopup.alert({
+                                title: '提示',
+                                template: '<p>指纹记录全部删除成功</p>'
+                            });
+                        })
+
                     } else{
                         var alertPopup = $ionicPopup.alert({
                             title: '提示',
@@ -329,7 +344,12 @@
                     }
 
                 }).on('record', function(){
-                    $scope.currentDevice.getAllRecord(function(){});
+                    $timeout(function(){
+                        $scope.currentDevice.getAllRecord(function(){
+                            $scope.$apply();
+                        });
+                    })
+
                 })
 
                 $scope.currentArr = {}

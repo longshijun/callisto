@@ -19,8 +19,8 @@ module.exports = {
                 openid: openid
             }, 'compel_bind', access_token, function(err, result){
                 console.log('微信绑定---》', err, result);
-                result = typeof result == 'string'? JSON.parse(result) : result
-                if( err || result.base_resp.errcode != 0 ){ //微信绑定错误了
+                result = typeof result == 'string'? JSON.parse(result || '{}') : result
+                if( err || (result.base_resp && result.base_resp.errcode != 0) ){ //微信绑定错误了
                     user.api.unbindDevice({
                         openid: openid,
                         device_id: device_id,
@@ -49,7 +49,7 @@ module.exports = {
             console.log('微信解绑--》', err, result);
 
             result = typeof result == 'string'? JSON.parse(result) : result
-            if(result.base_resp.errcode != 0)
+            if( !result.base_resp || result.base_resp.errcode != 0)
                 return callback(result);
             user.api.unbindDevice(param, function(err, result){
                 if(err)

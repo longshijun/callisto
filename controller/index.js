@@ -312,8 +312,11 @@ module.exports = {
             openid: openid,
             device_id: device_id
         }, function(err, result){
-            if(err)
-                return res.reply(err);
+            if(err){
+                console.log('handle unbind error:',err, result)
+                return res.send(err);
+            }
+
             user.api.removeAllFingers(device_id, function(err){
 
                 user.api.removeAllRecords(device_id, function(){})
