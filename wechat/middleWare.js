@@ -25,6 +25,9 @@ setTimeout(function(){
                 sockets[openid] = socket;
         }).on('disconnect', function () {
           //  delete sockets[openid];
+            console.log('socket io 离线：', openid);
+            if(sockets[openid])
+                delete sockets[openid];
         });
     });
 });
@@ -511,6 +514,7 @@ function handleDeviceReport(req, res){
 
             break;
         case 0x07: //指纹删除请求
+            console.log('收到了指纹删除请求');
             var finger = buffer[buffer.length - 1] ;
             var from = buffer[2];
             if(from == 0x01){
@@ -526,6 +530,7 @@ function handleDeviceReport(req, res){
                     }, function(err, device){
                         if(err)
                             return;
+                        console.log('根据mac获得设备信息：', device);
                         if(device && device.users[0].length){
                             var openId = device.users[0];
                             var socket = sockets[openId];
@@ -558,6 +563,7 @@ function handleDeviceReport(req, res){
                                     "color": "#d11a19"
                                 }
                             };
+                            console.log('指纹删除成功', openId);
                             callisto.wechatAPI.sendTemplate(openId, bindSuccessInfo, null, data, function(){});
 
                         }
@@ -575,7 +581,7 @@ function handleDeviceReport(req, res){
         case 0x09: //删除所有指纹
             var type = buffer[buffer.length - 1] ;
             user.api.removeAllRecords(mac.to, function(){});
-
+            console.log('删除全部指纹');
             if(type == 0x01){
                 user.api.getDeviceByDeviceId({
                     device_id: mac.toLowerCase()
@@ -596,7 +602,6 @@ function handleDeviceReport(req, res){
             }else if(type == 0x02){
 
             }
-
             break;
     }
 
